@@ -9,6 +9,8 @@ This MSC clarifies resolution order and extends arbitrary key-value pairs to ind
 [`m.room.member`][memb_state] events, allowing for per-room scoped arbitrary profile keys usable by
 proposals such as [MSC4247][], [MSC4426][], [MSC4440][], and [MSC4462][].
 
+TODO: how does this MSC resolve T&S concerns in other MSCs?
+
 ## Proposal
 
 `m.room.member` events now MAY contain any additional field permitted on [global profiles][MSC4133],
@@ -26,6 +28,8 @@ that desired keys are [propagated to rooms][MSC4466].
 
 Homeservers MUST reject profile keys that should otherwise exist on membership events, such as the
 `membership` key (or any key introduced into the spec in the future).
+
+TODO: how does this MSC allow moderation by people of power in the room? can fields only be removed?
 
 ## Potential issues
 
