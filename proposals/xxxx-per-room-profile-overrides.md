@@ -34,7 +34,7 @@ Homeservers MUST reject profile keys that should otherwise exist on membership e
 Users could potentially define a `membership` key on their profile and propagate it to rooms. The same
 could be true for any future introduced key on `m.room.member` events: validation is key to prevent this.
 
-See [the below listed alternative][#use-of-a-field-under-membership-event]
+See Alternatives below.
 
 ### State bloat
 
