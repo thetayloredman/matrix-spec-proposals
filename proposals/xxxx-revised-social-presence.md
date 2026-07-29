@@ -30,9 +30,9 @@ Revised Social Presence brings the busy state aboard with adjusted semantics to 
 
 ### Presence States
 
-Ultimately, other users do not care about the technical particulars of your reachability, they care solely about the
-social qualities of your reachability itself. In practice, this means reframing presence from a connection state to a
-sense of availability, where we define the following states:
+Ultimately, users do not care about the technical particulars of other users' reachability, they care solely about the
+social qualities of their reachability itself. To better serve this need, presence must be reframed from a connection
+state to a sense of availability, where this proposal defines the following states:
 * `active`: fully reachable; available to reply
 * `idle`: maybe-reachable; connected and may reply
 * `busy`: fully unreachable; unavailable to reply
@@ -67,9 +67,9 @@ The new event contains two properties:
     * For its behaviour in relation to the federation [User Presence Update] status fields, see [Extensible Status].
 
 Clients MUST NOT modify these properties unless explicitly directed to by a user. Clients and servers MUST ignore states
-in `presence_override` that they do not recognise, acting as they were unset, rather than clearing it automatically.
-Clients MUST manage near-term persistent data via this account data to ensure they have a single source of truth for
-this information, rather than managing it with endpoints.
+in `presence_override` that they do not recognise, acting as if they were unset, rather than clearing it automatically.
+
+Any update to the `m.presence.persist` account data event triggers an immediate presence update for the user.
 
 Example `m.presence.persist` event:
 ```json
@@ -87,7 +87,7 @@ A user's final presence state is determined by their local server according to t
 
 1. If all clients are offline, the state is `offline`
 2. If `presence_override` in `m.presence.persist` is set, the state is the override
-3. If any client sets a `"busy"` state, the state is `"busy"`
+3. If any client sets a `"busy"` state, the state is `busy`
 4. If any client sets an `"active"` state, the state is `active`
 5. The state is `idle`
 
@@ -104,8 +104,10 @@ value of time \- for example, 5 minutes \- has passed since the client's most re
 In the case of Application Services, servers actively make requests to them via the [Application Service API].
 Practically, this means Application Services can be reliably determined to be offline without servers timing them out
 based on inactivity. In order to prevent Application Services from having to update presence for all of their namespaced
-users on a given interval, servers MUST NOT offline an Application Service's namespaced users unless requests to the
-Application Service fail.
+users on a given interval, servers MUST NOT offline an Application Service's exclusive namespaced users unless requests
+to the Application Service fail.
+
+For backwards compatibility rules, see the corresponding section in [Simplified Activity].
 
 #### Busy State
 
@@ -123,34 +125,36 @@ automated actions and being unsure which state to return the override to.
 
 ### Simplified Activity
 
-You may observe that none of the new [Presence States] require the `currently_active` marker, since holding the existing
-`"online"` state without being `currently_active` is considered to be idle, and the only state where `currently_active`
-applies is `"active"`. You may also observe that the `last_active_ago` federation [User Presence Update] property can be
-redefined using a user's last state transition from `"active"` to any other state, which is also known to the receiving
-server. Given these redundancies:
-* Both `currently_active` and `last_active_ago` are deprecated from the [User Presence Update] type
-* `currently_active` is also deprecated from the [`m.presence` Sync Event] and [`GET
-  /_matrix/client/v3/presence/{userId}/status`] endpoint
+`currently_active` is redundant because holding the existing `"online"` state without being `currently_active` is now
+considered to be `"idle"`, so the only state where `currently_active` applies is `"active"`. Therefore,
+`currently_active` is deprecated by this proposal in the [User Presence Update] type, the [`m.presence` Sync Event], and
+the [`GET /_matrix/client/v3/presence/{userId}/status`] endpoint.
 
 `last_active_ago` in the [`m.presence` Sync Event] and [`GET /_matrix/client/v3/presence/{userId}/status`] is redefined
 as the number of milliseconds since a user's `presence` last updated from `"active"` to any other state, based on when
-the user's server received the transitioning EDU. Clients SHOULD ignore this property altogether while a user is
-`"active"`.
+the recipient's server received the transitioning EDU. Because this information is now given by the recipient's server,
+`last_active_ago` is deprecated from the federation [User Presence Update] type. Clients SHOULD ignore this property
+altogether while a user is `"active"`.
 
 For backwards compatibility:
-* Servers implementing this proposal SHOULD ignore all incoming [User Presence Update] `last_active_ago` values and
-  derive their own according
-* Clients and servers SHOULD apply the behaviour map given in [Presence States] if they receive an old presence state or
-  a `true` `currently_active` value
+* Servers SHOULD reinterpret an old presence state or a `true` `currently_active` value in an incoming presence EDU
+  according to the behaviour map given in [Presence States] before passing presence onto clients. This necessarily
+  causes clients that do not implement this proposal to display everyone as offline.
+* Servers SHOULD ignore all incoming [User Presence Update] `last_active_ago` values and derive their own according to
+  the definition above before passing presence onto clients.
+* Clients SHOULD reinterpret an old presence state or a `true` `currently_active` value in an [`m.presence` Sync Event]
+  according to the behaviour map given in [Presence States].
+* Clients MUST still provide the deprecated presence states to servers that do not yet implement this proposal according
+  to the [`GET /_matrix/client/versions`][cs-versions] response.
 
 ### Extensible Status
 
 The `status_msg` property of the federation [User Presence Update] type and [`GET
-/_matrix/client/v3/presence/{userId}/status`] is **deprecated**, to be replaced with an extensible `status` object with
-a single string property `msg`  for any future expanding status needs, as desired in proposals like [MSC4426]. Whenever
-this is broadcasted or requested, servers MUST use current value of the corresponding property in `m.presence.persist`.
-For backwards compatibility, servers and clients implementing this proposal SHOULD process `status_msg` in lieu of the
-EDU property and endpoint response property respectively.
+/_matrix/client/v3/presence/{userId}/status`] is **deprecated**, to be replaced with an optional extensible `status`
+object with a single optional string property `msg`  for any future expanding status needs, as desired in proposals like
+[MSC4426]. Whenever this is broadcasted or requested, servers MUST use current value of the corresponding property in
+`m.presence.persist`. For backwards compatibility, servers and clients implementing this proposal SHOULD process
+`status_msg` in lieu of the EDU property and endpoint response property respectively.
 
 The same applies to the [`m.presence` Sync Event], where clients implementing this proposal should accept `status_msg`
 in lieu of the `status` property.
@@ -160,6 +164,42 @@ The `status_msg` request body property of the [`PUT /_matrix/client/v3/presence/
 so via the `m.presence.persist` account data to ensure the data is consistent across all a user's clients. It should be
 noted that this deprecation also means [`PUT /_matrix/client/v3/presence/{userId}/status`] is no longer useful to
 clients that call [`GET /_matrix/client/v3/sync`].
+
+### `m.presence` EDU and Sync Event Examples
+
+Given all the changes made in previous sections, here is an example [User Presence Update] object:
+```jsonc
+{
+    "presence": "busy",
+    "status": {
+        "msg": "Partying like it's 2023!"
+    },
+    "user_id": "@john:example.com",
+    // Deprecated:
+    "last_active_ago": 0,
+    // Deprecated but already optional:
+    "currently_active": false,
+    "status_msg": ""
+}
+```
+
+And the corresponding example [`m.presence` Sync Event]:
+```jsonc
+{
+    "content": {
+        "presence": "busy",
+        "status": {
+            "msg": "Partying like it's 2023!"
+        }
+        // Deprecated but already optional:
+        "currently_active": "false",
+        "last_active_ago": 0,
+        "status_msg": ""
+    },
+    "sender": "@john:example.com",
+    "type": "m.presence"
+}
+```
 
 ## Alternatives
 
