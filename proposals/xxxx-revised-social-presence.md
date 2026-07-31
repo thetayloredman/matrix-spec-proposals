@@ -283,6 +283,7 @@ the server to adopt a version of the spec that includes it.
 [State Determination]: #State-Determination
 [Near-Term Persistent Data]: #Near-Term-Persistent-Data
 [Extensible Status]: #Extensible-Status
+[Simplified Activity]: #Simplified-Activity
 [User Presence Update]: https://spec.matrix.org/v1.19/server-server-api/#definition-mpresence_user-presence-update
 [`m.presence` Sync Event]: https://spec.matrix.org/v1.19/client-server-api/#mpresence
 [Presence Client-Server Endpoints]: https://spec.matrix.org/v1.19/client-server-api/#client-behaviour-8
