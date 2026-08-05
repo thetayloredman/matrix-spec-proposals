@@ -28,6 +28,10 @@ Revised Social Presence brings the busy state aboard with adjusted semantics to 
 
 ## Proposal
 
+The [Presence module] of the Client-Server API and the [Presence section] of the Server-Server API are adjusted as
+follows. Implementations of Matrix spec versions containing these features MUST support their datums, endpoints, and
+associated behaviours, unless they are explicitly declared to be OPTIONAL.
+
 ### Presence States
 
 Ultimately, users do not care about the technical particulars of other users' reachability, they care solely about the
@@ -53,17 +57,17 @@ deprecated** from the federation [User Presence Update] type, the [`m.presence` 
 Endpoints], and [`GET /_matrix/client/v3/sync`] by this proposal. The new states `"active"`, `"idle"`, and `"busy"` are
 introduced to all of these mechanisms in their place.
 
-#### Near-Term Persistent Data
+#### Presence Overrides
 
 Users may wish to set their presence state manually on occasion, particularly if they need to let others know they are
-temporarily unavailable. This proposal affords users the option to set a persistent override state across all of their
-clients, using the `m.presence.persist` account data event.
+temporarily unavailable. This proposal affords users the option to set a near-term persisting override state across all
+of their clients, using the `m.presence.persist` account data event.
 
 The new event contains two properties:
-* An optional string enumeration, `presence_override`, which can be any of the previously defined states.
+* An OPTIONAL string enumeration, `presence_override`, which can be any of the previously defined states.
   * For its behaviour as part of resolving a user's final presence state, see [State Determination].
-* An optional object, `status`, acting as a key-value store for status information and containing one property.
-  * An optional string, `msg`, which is a free-form input corresponding with the existing `status_msg` property.
+* An OPTIONAL object, `status`, acting as a key-value store for status information and containing one property.
+  * An OPTIONAL string, `msg`, which is a free-form input corresponding with the existing `status_msg` property.
     * For its behaviour in relation to the federation [User Presence Update] status fields, see [Extensible Status].
 
 Clients MUST NOT modify these properties unless explicitly directed to by a user. Clients and servers MUST ignore states
@@ -83,7 +87,7 @@ Example `m.presence.persist` event:
 
 #### State Determination
 
-A user's final presence state is determined by their local server according to the first rule that applies below:
+A user's final presence state MUST be determined by their local server according to the first rule that applies below:
 
 1. If all clients are offline, the state is `offline`
 2. If `presence_override` in `m.presence.persist` is set, the state is the override
@@ -97,7 +101,7 @@ This uses the following ownership model:
 * Servers can determine if a client is offline on its behalf
 
 Since clients are expected to determine when their users are idle, and servers only determine when clients are offline,
-[Idle Timeouts] are replaced with offline timeouts. That is, servers may determine a client is offline after a threshold
+[Idle Timeouts] are replaced with offline timeouts. That is, servers MAY determine a client is offline after a threshold
 value of time \- for example, 5 minutes \- has passed since the client's most recent request to [`GET
 /_matrix/client/v3/sync`] completed.
 
@@ -116,7 +120,7 @@ While `"active"` and `"idle"` map cleanly from existing states encoded by the pr
 for other users that wish to solicit conversation. A `"busy"` user is unique in that this state is exclusively triggered
 by a curated set of user actions, rather than connection properties or general activity.
 
-If a `"busy"` state is manually selected by a user, it SHOULD always be set via [Near-Term Persistent Data] to prevent
+If a `"busy"` state is manually selected by a user, it SHOULD always be set via [Presence Overrides] to prevent
 autonomous regression to other states, as with other overrides. If a client wishes to set a `"busy"` state autonomously
 following a select user action \- for example, if the user joins a call \- it SHOULD do so via the [`GET
 /_matrix/client/v3/sync`] endpoint or the [Presence Client-Server Endpoints], as with other states. It is by design that
@@ -150,8 +154,8 @@ For backwards compatibility:
 ### Extensible Status
 
 The `status_msg` property of the federation [User Presence Update] type and [`GET
-/_matrix/client/v3/presence/{userId}/status`] is **deprecated**, to be replaced with an optional extensible `status`
-object with a single optional string property `msg`  for any future expanding status needs, as desired in proposals like
+/_matrix/client/v3/presence/{userId}/status`] is **deprecated**, to be replaced with an OPTIONAL extensible `status`
+object with a single OPTIONAL string property `msg`  for any future expanding status needs, as desired in proposals like
 [MSC4426]. Whenever this is broadcasted or requested, servers MUST use current value of the corresponding property in
 `m.presence.persist`. For backwards compatibility, servers and clients implementing this proposal SHOULD process
 `status_msg` in lieu of the EDU property and endpoint response property respectively.
@@ -160,10 +164,10 @@ The same applies to the [`m.presence` Sync Event], where clients implementing th
 in lieu of the `status` property.
 
 The `status_msg` request body property of the [`PUT /_matrix/client/v3/presence/{userId}/status`] endpoint is
-**deprecated** altogether. Clients that wish to manage [Near-Term Persistent Data], like overrides and statuses, MUST do
-so via the `m.presence.persist` account data to ensure the data is consistent across all a user's clients. It should be
-noted that this deprecation also means [`PUT /_matrix/client/v3/presence/{userId}/status`] is no longer useful to
-clients that call [`GET /_matrix/client/v3/sync`].
+**deprecated** altogether. Clients that wish to manage [Presence Overrides] MUST do so via the `m.presence.persist`
+account data to ensure the data is consistent across all a user's clients. It should be noted that this deprecation also
+means [`PUT /_matrix/client/v3/presence/{userId}/status`] is no longer useful to clients that call [`GET
+/_matrix/client/v3/sync`].
 
 ### `m.presence` EDU and Sync Event Examples
 
@@ -190,7 +194,7 @@ And the corresponding example [`m.presence` Sync Event]:
         "presence": "busy",
         "status": {
             "msg": "Partying like it's 2023!"
-        }
+        },
         // Deprecated but already optional:
         "currently_active": "false",
         "last_active_ago": 0,
@@ -251,6 +255,10 @@ proposal does not allow clients to request that other users do not see their "La
 information is inherent to presence, so if a user did not trust someone to see their "Last Active Ago," they would not
 be sharing presence with them.
 
+## Security Considerations
+
+This proposal does not introduce any new security considerations as far as its authors are aware.
+
 ## Unstable Prefix
 
 | Stable Identifier     | Purpose                                                                           | Unstable Identifier                                      |
@@ -281,7 +289,7 @@ the server to adopt a version of the spec that includes it.
 [MSC4495]: https://github.com/matrix-org/matrix-spec-proposals/pull/4495
 [Presence States]: #Presence-States
 [State Determination]: #State-Determination
-[Near-Term Persistent Data]: #Near-Term-Persistent-Data
+[Presence Overrides]: #Presence-Overrides
 [Extensible Status]: #Extensible-Status
 [Simplified Activity]: #Simplified-Activity
 [User Presence Update]: https://spec.matrix.org/v1.19/server-server-api/#definition-mpresence_user-presence-update
@@ -289,6 +297,8 @@ the server to adopt a version of the spec that includes it.
 [Presence Client-Server Endpoints]: https://spec.matrix.org/v1.19/client-server-api/#client-behaviour-8
 [Idle Timeouts]: https://spec.matrix.org/v1.19/client-server-api/#idle-timeout
 [Application Service API]: https://spec.matrix.org/v1.19/application-service-api
+[Presence module]: https://spec.matrix.org/v1.19/client-server-api/#presence
+[Presence section]: https://spec.matrix.org/v1.19/server-server-api/#presence
 [`GET /_matrix/client/v3/presence/{userId}/status`]: https://spec.matrix.org/v1.19/client-server-api/#get_matrixclientv3presenceuseridstatus
 [`PUT /_matrix/client/v3/presence/{userId}/status`]: https://spec.matrix.org/v1.19/client-server-api/#put_matrixclientv3presenceuseridstatus
 [`GET /_matrix/client/v3/sync`]: https://spec.matrix.org/v1.19/client-server-api/#get_matrixclientv3sync
