@@ -100,10 +100,16 @@ This uses the following ownership model:
 * Users may direct clients to set a specific shared persistent override
 * Servers can determine if a client is offline on its behalf
 
+For backwards compatibility rules, see the corresponding section in [Simplified Activity].
+
+##### Offline 
+
 Since clients are expected to determine when their users are idle, and servers only determine when clients are offline,
-[Idle Timeouts] are replaced with offline timeouts. That is, servers MAY determine a client is offline after a threshold
-value of time \- for example, 5 minutes \- has passed since the client's most recent request to [`GET
+[Idle Timeouts] are replaced with offline timeouts. That is, servers SHOULD determine a client is offline after a
+threshold value of time \- for example, 5 minutes \- has passed since the client's most recent request to [`GET
 /_matrix/client/v3/sync`] completed.
+
+###### Application Services
 
 In the case of Application Services, servers actively make requests to them via the [Application Service API].
 Practically, this means Application Services can be reliably determined to be offline without servers timing them out
@@ -111,7 +117,16 @@ based on inactivity. In order to prevent Application Services from having to upd
 users on a given interval, servers MUST NOT offline an Application Service's exclusive namespaced users unless requests
 to the Application Service fail.
 
-For backwards compatibility rules, see the corresponding section in [Simplified Activity].
+###### Remote Users
+
+Sometimes, remote servers may experience federation issues without being able to broadcast `offline` states for their
+users first. In these instances, it is undesirable for their users to be stuck appearing active. When a server
+determines a remote to be unreachable, the server MUST:
+1. Store the remote users' current presence states
+2. Distribute an `"offline"` state for their `presence` in an [`m.presence` Sync Event] and responses to [`GET
+   /_matrix/client/v3/presence/{userId}/status`]
+3. When federation to the remote succeeds again, revert their `presence` to the state stored in step 1 in an
+   [`m.presence` Sync Event] and responses to [`GET /_matrix/client/v3/presence/{userId}/status`]
 
 #### Busy State
 
@@ -254,6 +269,12 @@ Therefore, this proposal does not allow clients to set and send their own "Last 
 proposal does not allow clients to request that other users do not see their "Last Active Ago" values because the
 information is inherent to presence, so if a user did not trust someone to see their "Last Active Ago," they would not
 be sharing presence with them.
+
+### Remote Offlines
+
+One possible alternative to the algorithm given by this proposal would be to drop state data for remote users after a
+timeout. This approach was not chosen to avoid making every presence-sending server rebroadcast their presence states on
+an interval, akin to a heartbeat system, which would harm our stated aim of reducing federation traffic.
 
 ## Security Considerations
 
