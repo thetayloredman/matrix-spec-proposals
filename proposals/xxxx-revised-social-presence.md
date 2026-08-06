@@ -155,6 +155,8 @@ the recipient's server received the transitioning EDU. Because this information 
 `last_active_ago` is deprecated from the federation [User Presence Update] type. Clients SHOULD ignore this property
 altogether while a user is `"active"`.
 
+Implementations should note that proactive event tracking is not used by this proposal.
+
 For backwards compatibility:
 * Servers SHOULD reinterpret an old presence state or a `true` `currently_active` value in an incoming presence EDU
   according to the behaviour map given in [Presence States] before passing presence onto clients. This necessarily
