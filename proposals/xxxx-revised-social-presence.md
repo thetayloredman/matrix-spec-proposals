@@ -107,7 +107,7 @@ For backwards compatibility rules, see the corresponding section in [Simplified 
 Since clients are expected to determine when their users are idle, and servers only determine when clients are offline,
 [Idle Timeouts] are replaced with offline timeouts. That is, servers SHOULD determine a client is offline after a
 threshold value of time \- for example, 5 minutes \- has passed since the client's most recent request to [`GET
-/_matrix/client/v3/sync`] completed.
+/_matrix/client/v3/sync`] or [`PUT /_matrix/client/v3/presence/{userId}/status`] completed.
 
 ###### Application Services
 
