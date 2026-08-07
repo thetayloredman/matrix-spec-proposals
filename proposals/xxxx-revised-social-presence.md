@@ -212,9 +212,9 @@ And the corresponding example [`m.presence` Sync Event]:
         "status": {
             "msg": "Partying like it's 2023!"
         },
+        "last_active_ago": 0,
         // Deprecated but already optional:
         "currently_active": "false",
-        "last_active_ago": 0,
         "status_msg": ""
     },
     "sender": "@john:example.com",
