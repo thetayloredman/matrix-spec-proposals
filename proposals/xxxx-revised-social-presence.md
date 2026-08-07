@@ -278,6 +278,14 @@ One possible alternative to the algorithm given by this proposal would be to dro
 timeout. This approach was not chosen to avoid making every presence-sending server rebroadcast their presence states on
 an interval, akin to a heartbeat system, which would harm our stated aim of reducing federation traffic.
 
+## Potential Issues
+
+### State Flapping
+
+Clients may switch between states rapidly in short periods. The fewer clients a user has at a given state in [State
+Determination], the more likely this is to cause flapping over federation. Implementations and instance operators may
+wish to debounce outbound federated state transitions to mitigate this issue.
+
 ## Security Considerations
 
 This proposal does not introduce any new security considerations as far as its authors are aware.
