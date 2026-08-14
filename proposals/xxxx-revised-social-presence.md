@@ -128,6 +128,10 @@ determines a remote to be unreachable, the server MUST:
 3. When federation to the remote succeeds again, revert their `presence` to the state stored in step 1 in an
    [`m.presence` Sync Event] and responses to [`GET /_matrix/client/v3/presence/{userId}/status`]
 
+Implementations that currently send or expect fedeerated rebroadcasts to affirm presence states as part of an interval
+offlining system should note that this behaviour is intentionally made redundant by this proposal. Servers SHOULD NOT
+perform the offlining procedure described in this section or rebroadcast their users' states on a time interval.
+
 #### Busy State
 
 While `"active"` and `"idle"` map cleanly from existing states encoded by the presence system, `"busy"` is a
