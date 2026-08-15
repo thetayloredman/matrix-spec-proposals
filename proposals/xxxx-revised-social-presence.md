@@ -32,11 +32,11 @@ The [Presence module] of the Client-Server API and the [Presence section] of the
 follows. Implementations of Matrix spec versions containing these features MUST support their datums, endpoints, and
 associated behaviours, unless they are explicitly declared to be OPTIONAL.
 
-### Presence States
+### Revised Presence States
 
 Ultimately, users do not care about the technical particulars of other users' reachability, they care solely about the
 social qualities of their reachability itself. To better serve this need, presence must be reframed from a connection
-state to a sense of availability, where this proposal defines the following states:
+state to a sense of availability. In this framing, this proposal defines the following states:
 * `active`: fully reachable; available to reply
 * `idle`: maybe-reachable; connected and may reply
 * `busy`: fully unreachable; unavailable to reply
@@ -57,7 +57,21 @@ deprecated** from the federation [User Presence Update] type, the [`m.presence` 
 Endpoints], and [`GET /_matrix/client/v3/sync`] by this proposal. The new states `"active"`, `"idle"`, and `"busy"` are
 introduced to all of these mechanisms in their place.
 
-#### Presence Overrides
+#### Busy State
+
+While `"active"` and `"idle"` map cleanly from existing states encoded by the presence system, `"busy"` is a
+[long-requested][MSC3026] feature representing a  connected user's voluntary declaration that they will not be reachable
+for other users that wish to solicit conversation. A `"busy"` user is unique in that this state is exclusively triggered
+by a curated set of user actions, rather than connection properties or general activity.
+
+If a `"busy"` state is manually selected by a user, it SHOULD always be set via [Presence Overrides] to prevent
+autonomous regression to other states, as with other overrides. If a client wishes to set a `"busy"` state autonomously
+following a select user action \- for example, if the user joins a call \- it SHOULD do so via the [`GET
+/_matrix/client/v3/sync`] endpoint or the [Presence Client-Server Endpoints], as with other states. It is by design that
+the latter case does not override the overrides mechanism to prevent clients from interfering with each other's
+automated actions and being unsure which state to return the override to.
+
+### Presence Overrides
 
 Users may wish to set their presence state manually on occasion, particularly if they need to let others know they are
 temporarily unavailable. This proposal affords users the option to set a near-term persisting override state across all
@@ -85,7 +99,7 @@ Example `m.presence.persist` event:
 }
 ```
 
-#### State Determination
+### State Determination
 
 A user's final presence state MUST be determined by their local server according to the first rule that applies below:
 
@@ -102,22 +116,23 @@ This uses the following ownership model:
 
 For backwards compatibility rules, see the corresponding section in [Simplified Activity].
 
-##### Offline 
+#### Offline Timeouts
 
 Since clients are expected to determine when their users are idle, and servers only determine when clients are offline,
-[Idle Timeouts] are replaced with offline timeouts. That is, servers SHOULD determine a client is offline after a
-threshold value of time \- for example, 5 minutes \- has passed since the client's most recent request to [`GET
-/_matrix/client/v3/sync`] or [`PUT /_matrix/client/v3/presence/{userId}/status`] completed.
+[Idle Timeouts] are replaced with offline timeouts. Servers implementing this proposal MUST NOT mark a client as idle
+automatically. Servers SHOULD determine a client is offline after a threshold value of time \- for example, 5 minutes \-
+has passed since the client's most recent request to [`GET /_matrix/client/v3/sync`] or [`PUT
+/_matrix/client/v3/presence/{userId}/status`] completed.
 
-###### Application Services
+#### Provisions for Application Services
 
 In the case of Application Services, servers actively make requests to them via the [Application Service API].
 Practically, this means Application Services can be reliably determined to be offline without servers timing them out
 based on inactivity. In order to prevent Application Services from having to update presence for all of their namespaced
-users on a given interval, servers MUST NOT offline an Application Service's exclusive namespaced users unless requests
-to the Application Service fail.
+users on a given interval, servers MUST NOT apply offline timeouts to an Application Service's exclusive namespaced
+users unless requests to the Application Service fail.
 
-###### Remote Users
+#### Provisions for Remote Users
 
 Sometimes, remote servers may experience federation issues without being able to broadcast `offline` states for their
 users first. In these instances, it is undesirable for their users to be stuck appearing active. When a server
@@ -128,23 +143,9 @@ determines a remote to be unreachable, the server MUST:
 3. When federation to the remote succeeds again, revert their `presence` to the state stored in step 1 in an
    [`m.presence` Sync Event] and responses to [`GET /_matrix/client/v3/presence/{userId}/status`]
 
-Implementations that currently send or expect fedeerated rebroadcasts to affirm presence states as part of an interval
+Implementations that currently send or expect federated rebroadcasts to affirm presence states as part of an interval
 offlining system should note that this behaviour is intentionally made redundant by this proposal. Servers SHOULD NOT
 perform the offlining procedure described in this section or rebroadcast their users' states on a time interval.
-
-#### Busy State
-
-While `"active"` and `"idle"` map cleanly from existing states encoded by the presence system, `"busy"` is a
-[long-requested][MSC3026] feature representing a  connected user's voluntary declaration that they will not be reachable
-for other users that wish to solicit conversation. A `"busy"` user is unique in that this state is exclusively triggered
-by a curated set of user actions, rather than connection properties or general activity.
-
-If a `"busy"` state is manually selected by a user, it SHOULD always be set via [Presence Overrides] to prevent
-autonomous regression to other states, as with other overrides. If a client wishes to set a `"busy"` state autonomously
-following a select user action \- for example, if the user joins a call \- it SHOULD do so via the [`GET
-/_matrix/client/v3/sync`] endpoint or the [Presence Client-Server Endpoints], as with other states. It is by design that
-the latter case does not override the overrides mechanism to prevent clients from interfering with each other's
-automated actions and being unsure which state to return the override to.
 
 ### Simplified Activity
 
@@ -159,7 +160,7 @@ the recipient's server received the transitioning EDU. Because this information 
 `last_active_ago` is deprecated from the federation [User Presence Update] type. Clients SHOULD ignore this property
 altogether while a user is `"active"`.
 
-Implementations should note that proactive event tracking is not used by this proposal.
+Implementations should note that pro-active event tracking is not used in this redefinition of `last_active_ago`.
 
 For backwards compatibility:
 * Servers SHOULD reinterpret an old presence state or a `true` `currently_active` value in an incoming presence EDU
@@ -175,11 +176,11 @@ For backwards compatibility:
 ### Extensible Status
 
 The `status_msg` property of the federation [User Presence Update] type and [`GET
-/_matrix/client/v3/presence/{userId}/status`] is **deprecated**, to be replaced with an OPTIONAL extensible `status`
-object with a single OPTIONAL string property `msg`  for any future expanding status needs, as desired in proposals like
-[MSC4426]. Whenever this is broadcasted or requested, servers MUST use current value of the corresponding property in
-`m.presence.persist`. For backwards compatibility, servers and clients implementing this proposal SHOULD process
-`status_msg` in lieu of the EDU property and endpoint response property respectively.
+/_matrix/client/v3/presence/{userId}/status`] is **deprecated**. It is replaced with an OPTIONAL extensible `status`
+object with a single OPTIONAL string property `msg`. This extensible approach provides for future expanding status
+needs, as desired in proposals like [MSC4426]. Whenever this is broadcasted or requested, servers MUST use current value
+of the corresponding property in `m.presence.persist`. For backwards compatibility, servers and clients implementing
+this proposal SHOULD process `status_msg` in lieu of the EDU property and endpoint response property respectively.
 
 The same applies to the [`m.presence` Sync Event], where clients implementing this proposal should accept `status_msg`
 in lieu of the `status` property.
@@ -225,6 +226,14 @@ And the corresponding example [`m.presence` Sync Event]:
     "type": "m.presence"
 }
 ```
+
+## Potential Issues
+
+### State Flapping
+
+Clients may switch between states rapidly in short periods. The fewer clients a user has at a given state in [State
+Determination], the more likely this is to cause flapping over federation. Implementations and instance operators may
+wish to debounce outbound federated state transitions to mitigate this issue.
 
 ## Alternatives
 
@@ -281,14 +290,6 @@ be sharing presence with them.
 One possible alternative to the algorithm given by this proposal would be to drop state data for remote users after a
 timeout. This approach was not chosen to avoid making every presence-sending server rebroadcast their presence states on
 an interval, akin to a heartbeat system, which would harm our stated aim of reducing federation traffic.
-
-## Potential Issues
-
-### State Flapping
-
-Clients may switch between states rapidly in short periods. The fewer clients a user has at a given state in [State
-Determination], the more likely this is to cause flapping over federation. Implementations and instance operators may
-wish to debounce outbound federated state transitions to mitigate this issue.
 
 ## Security Considerations
 
