@@ -78,8 +78,9 @@ temporarily unavailable. This proposal affords users the option to set a near-te
 of their clients, using the `m.presence.persistent` global account data event.
 
 The new event contains two properties:
-* An OPTIONAL string enumeration, `state_override`, which can be any of the previously defined states (default `""`)
+* An OPTIONAL string enumeration, `state_override`, which can be any of the previously defined states
   * For its behaviour as part of resolving a user's final presence state, see [State Determination].  
+    Its default behaviour is simply to be ignored in this process if it is not set.
 * An OPTIONAL object, `status`, acting as a key-value store for status information and containing one property
   (default `{}`)
   * An OPTIONAL string, `msg`, which is a free-form input corresponding with the existing `status_msg` property
