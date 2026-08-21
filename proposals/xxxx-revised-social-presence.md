@@ -75,7 +75,7 @@ state to return the override to.
 
 Users may wish to set their presence state manually on occasion, particularly if they need to let others know they are
 temporarily unavailable. This proposal affords users the option to set a near-term persisting override state across all
-of their clients, using the `m.presence.persistent` global account data event.
+of their clients, using the `m.presence.persistent` global [Account Data] event.
 
 The new event contains two properties:
 * An OPTIONAL string enumeration, `state_override`, which can be any of the previously defined states
@@ -160,10 +160,14 @@ perform the offlining procedure described in this section, or rebroadcast their 
 
 ### Simplified Activity
 
+#### Currently Active
+
 `currently_active` is redundant because holding the existing `"online"` state without being `currently_active` is now
 considered to be `"idle"`, so the only state where `currently_active` applies is `"active"`. Therefore,
 `currently_active` is deprecated by this proposal in the [User Presence Update] type, the [`m.presence` Sync Event], and
 the [`GET /_matrix/client/v3/presence/{userId}/status`] endpoint.
+
+#### Last Active Ago
 
 `last_active_ago` in the [`m.presence` Sync Event] and [`GET /_matrix/client/v3/presence/{userId}/status`] is redefined
 as the number of milliseconds since a user's `presence` last updated from `"active"` to any other state, based on when
@@ -173,8 +177,9 @@ altogether while a user is `"active"`.
 
 Implementations should note that pro-active event tracking is not used in this redefinition of `last_active_ago`.
 
-For backwards compatibility:
-* Servers SHOULD reinterpret an old presence state or a `true` `currently_active` value in an incoming presence EDU
+#### Backwards Compatibility
+
+* Servers SHOULD reinterpret an old presence state or a `currently_active` value of `true` in an incoming presence EDU
   according to the behaviour map given in [Presence States] before passing presence onto clients. This necessarily
   causes clients that do not implement this proposal to display everyone as offline.
 * Servers SHOULD ignore all incoming [User Presence Update] `last_active_ago` values and derive their own according to
@@ -279,7 +284,9 @@ Some platforms allow overrides to persist through being determined offline by th
 doing this to prevent people from having to manually set themselves as offline before they disconnect, and to avoid
 eroding the social use of the system by having people appear reachable when the network cannot be certain.
 
-### Declaring Last Active Ago
+### Last Active Ago
+
+#### Declaration by Sending Clients
 
 Some other decentralised platforms, like XMPP (defined by [XEP-0319]), allow clients to send their own "Last Active Ago"
 values. However, determining your own last active time for other people carries a number of drawbacks:
@@ -294,27 +301,39 @@ proposal does not allow clients to request that other users do not see their "La
 information is inherent to presence, so if a user did not trust someone to see their "Last Active Ago," they would not
 be sharing presence with them.
 
+#### Calculation by Receiving Clients
+
+Instead of having the homeserver tell the client when a remote user was last active based on their state transitions,
+the client could determine this information themselves. This approach was not taken to allow consistency for clients
+that are not always connected.
+
 ### Remote Offlines
 
 One possible alternative to the algorithm given by this proposal would be to drop state data for remote users after a
 timeout. This approach was not chosen to avoid making every presence-sending server rebroadcast their presence states on
 an interval, akin to a heartbeat system, which would harm our stated aim of reducing federation traffic.
 
-### Client Calculated Last Active Ago
-
-Instead of having the homeserver tell the client when a remote user was last active based on their state transitions,
-the client could determine this information themselves. This approach was not taken to allow consistency for clients
-that are not always connected.
-
 ## Security Considerations
+
+### Status
 
 The status message field may be abused, both technically as it is unbounded, and socially as it allows users to send
 free-form data. It should be noted that these apply to the existing presence system.
 
-Users may rapidly change presence states to exhaust resources on the server. While this applies to the existing presence
-system, this proposal introduces the ability for servers to induce artificial network failures. Such a condition could
-be created to cause remotes to keep track large volumes of temporarily offline states, or to sync large volumes of state
-transitions to their users.
+### State Flapping
+
+Users may rapidly change presence states to exhaust resources on remote servers. This flaw exists in the current
+presence system, and this proposal mitigates the issue by reducing the number of ways user activity triggers presence
+updates, formalising collation in [State Determination] to reduce the power of individual clients, and suggesting that
+servers debounce outbound presence state transitions. Malicious servers are always capable of sending large volumes of
+any traffic to other servers, so noncompliance is beyond the scope of this section.
+
+This proposal includes provisions for offline timeouts on remote users, which may be leveraged to cause remote servers
+to keep track of large volumes of temporarily overriden states, or to sync large volumes of state transitions to their
+users. It is precisely to mitigate this new kind of flapping that this proposal suggests debouncing the trigger
+condition for marking remote users offline.
+
+### Activity Tracking
 
 Last active ago remains a tracking vector for user behaviours, although this proposal limits it to information already
 available by tracking a user's presence state transitions.
@@ -355,6 +374,7 @@ the server to adopt a version of the spec that includes it.
 [User Presence Update]: https://spec.matrix.org/v1.19/server-server-api/#definition-mpresence_user-presence-update
 [`m.presence` Sync Event]: https://spec.matrix.org/v1.19/client-server-api/#mpresence
 [Presence Client-Server Endpoints]: https://spec.matrix.org/v1.19/client-server-api/#client-behaviour-8
+[Account Data]: https://spec.matrix.org/v1.19/client-server-api/#client-config
 [Idle Timeouts]: https://spec.matrix.org/v1.19/client-server-api/#idle-timeout
 [Application Service API]: https://spec.matrix.org/v1.19/application-service-api
 [Presence module]: https://spec.matrix.org/v1.19/client-server-api/#presence
@@ -362,5 +382,5 @@ the server to adopt a version of the spec that includes it.
 [`GET /_matrix/client/v3/presence/{userId}/status`]: https://spec.matrix.org/v1.19/client-server-api/#get_matrixclientv3presenceuseridstatus
 [`PUT /_matrix/client/v3/presence/{userId}/status`]: https://spec.matrix.org/v1.19/client-server-api/#put_matrixclientv3presenceuseridstatus
 [`GET /_matrix/client/v3/sync`]: https://spec.matrix.org/v1.19/client-server-api/#get_matrixclientv3sync
-[cs-versions]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientversions
+[cs-versions]: https://spec.matrix.org/v1.19/client-server-api/#get_matrixclientversions
 [XEP-0319]: https://xmpp.org/extensions/xep-0319.html
