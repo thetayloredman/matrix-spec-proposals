@@ -20,7 +20,13 @@ users are eligible to be included in the response.
 
 ## Extension request
 
-The extension uses the common fields defined in [MSC4508]:
+In addition to the common fields defined in [MSC4508], the `ExtensionConfig` has the following fields:
+
+| Name              | Type    | Required | Comment                                                |
+|-------------------|---------|----------|--------------------------------------------------------|
+| `last_active_ago` | Boolean | No       | Whether to include `last_active_ago` values for users. |
+
+For example:
 
 ```json
 {
@@ -28,11 +34,14 @@ The extension uses the common fields defined in [MSC4508]:
         "presence": {
             "enabled": true,
             "lists": ["rooms", "dms"],
-            "rooms": ["!milkshake-enjoyers:example.tld"]
+            "rooms": ["!milkshake-enjoyers:example.tld"],
+            "last_active_ago": true
         }
     }
 }
 ```
+
+If `last_active_ago` is omitted, the server MUST proceed as though it was `false`.
 
 ## Extension response
 
@@ -51,11 +60,14 @@ A `PresenceUpdate` has the same format as an [`m.presence` Sync Event], as modif
 |-------------------|-------------------|----------|--------------------------------------------------------------------|
 | `presence`        | `PresenceState`   | No       | The user's current presence state                                  |
 | `status`          | `Status`          | No       | The user's status object                                           |
-| `last_active_ago` | Unsigned `number` | No       | Milliseconds elapsed since the user's `presence` was last `active` |
+| `last_active_ago` | Unsigned integer  | No       | Milliseconds elapsed since the user's `presence` was last `active` |
 
 `PresenceState` and `Status` are defined according to [MSC4532]. For the purposes of this extension, `presence` defaults
 to `offline` when it is not specified, and the `msg` field of `status` defaults to an empty string. Either field SHOULD
-be omitted if it holds its default value. `last_active_ago` MUST be present when `presence` is not `active`.
+be omitted if it holds its default value.
+
+If `last_active_ago` in the `ExtensionConfig` was given as `true`, and `presence` **is not** `active`, the server MUST
+include `last_active_ago`. The server MUST NOT include `last_active_ago` otherwise.
 
 Note that, unlike [`GET /_matrix/client/v3/sync`], the presence states are not wrapped in an `m.presence` ephemeral
 event with `type` and `content`. The extension can only ever carry presence, so the wrapper conveys no information.
@@ -150,12 +162,17 @@ indefinitely as more users undergo state transitions than are being synchronised
 model and [MSC4532]'s simplifications are intended to mitigate this by significantly reducing the volumes of data to be
 handled.
 
+As is the case in [`GET /_matrix/client/v3/sync`], retrieving `last_active_ago` values requires `offline` users to be
+included in the response. This proposal attempts to mitigate this issue by only including `last_active_ago` when the
+client requests it, and allowing the other data fields for `offline` users to be omitted to keep their presence updates
+as compact as possible.
+
 ## Alternatives
 
 ### Ephemeral Wrapper
 
 The response could wrap each room's receipts in an `m.presence` ephemeral event with `type` and `content` fields,
-matching [GET `/_matrix/client/v3/sync`]. The wrapper would let a client reuse its ephemeral event parsing, but it is
+matching [`GET /_matrix/client/v3/sync`]. The wrapper would let a client reuse its ephemeral event parsing, but it is
 redundant when the extension only carries presence updates. [MSC4508] already drops the ephemeral event wrapper for
 typing notifications.
 
