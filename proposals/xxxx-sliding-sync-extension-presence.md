@@ -67,7 +67,9 @@ to `offline` when it is not specified, and the `msg` field of `status` defaults 
 be omitted if it holds its default value.
 
 If `last_active_ago` in the `ExtensionConfig` was given as `true`, and `presence` **is not** `active`, the server MUST
-include `last_active_ago`. The server MUST NOT include `last_active_ago` otherwise.
+include `last_active_ago`. It MAY only omit the field in this circumstance if it cannot provide a value, such as in
+cases where it has never observed the user to be active, or where the user is not sharing presence with the requesting
+user. It MUST NOT include `last_active_ago` otherwise.
 
 Note that, unlike [`GET /_matrix/client/v3/sync`], the presence states are not wrapped in an `m.presence` ephemeral
 event with `type` and `content`. The extension can only ever carry presence, so the wrapper conveys no information.
