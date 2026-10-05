@@ -19,9 +19,7 @@ users are eligible to be included in the response.
 
 ## Extension request
 
-In addition to the common fields defined in [MSC4508], the `ExtensionConfig` has the following fields:
-
-For example:
+The extension uses the common fields defined in [MSC4508]:
 
 ```json
 {
